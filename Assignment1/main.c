@@ -1,26 +1,29 @@
-#include <stdio.h>
-#include <assert.h>
-#include "BF.h"
+#include "Heap.h"
 
 int main(void){
 
     char temp[255];
-    BF_Init();
 
-    const char* file = "file1";
+    char* file = "HP1";
 
-    if(BF_CreateFile(file) < 0)
-        printf("Wtf?\n");
+    int returned = HP_CreateFile(file, 'i', "ID", sizeof(int));
 
-    // int fd = BF_OpenFile(file);
-    
-    
-    // BF_AllocateBlock(fd);
-    // BF_WriteBlock(fd,fd);
-    BF_PrintError(temp);
+    HP_info* temp_header = HP_OpenFile(file);
 
-    // printf("%d\n",BF_GetBlockCounter(fd));
+    if(temp_header == NULL)
+        return -1;
+
+    HP_info_print(temp_header);
+
+    Record r1 = {.id = 1, .name = "Andreas", .surname = "Stamaths", .address = "Athens"};
+
+    HP_InsertEntry(*temp_header, r1);
 
 
-    // BF_CloseFile(fd);
+    // printf("%ld\n",sizeof(Record)*5+sizeof(Block_info));
+
+
+    HP_CloseFile(temp_header);
+
+    return 0;
 }
