@@ -1,24 +1,24 @@
 #include "Heap.h"
 
-char messages[256];
+char error_mess[256];
 
 int HP_CreateFile(char* fileName, char attrType, char* attrName, int attrLength){
 
     BF_Init();
 
     if(BF_CreateFile(fileName) < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
     int fd = BF_OpenFile(fileName);
     if(fd < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
     if(BF_AllocateBlock(fd) < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
@@ -31,14 +31,14 @@ int HP_CreateFile(char* fileName, char attrType, char* attrName, int attrLength)
     void* block;
 
     if(BF_ReadBlock(fd, 0, &block)){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
     memcpy(block, &header, sizeof(HP_info));
 
     if(BF_WriteBlock(fd, 0) < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
@@ -50,7 +50,7 @@ HP_info* HP_OpenFile(char* fileName){
 
     int fd = BF_OpenFile(fileName);
     if(fd < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return NULL;
     }
 
@@ -58,7 +58,7 @@ HP_info* HP_OpenFile(char* fileName){
     void* block;
 
     if(BF_ReadBlock(fd, 0, &block)){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return NULL;
     }
 
@@ -79,7 +79,7 @@ int HP_CloseFile(HP_info* hp_info){
 
 
     if(BF_CloseFile(hp_info->fileDesc) < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
@@ -102,7 +102,7 @@ int HP_InsertEntry(HP_info hp, Record record){
     for(i = 1 ; i < num_of_blocks ; i++){
 
         if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
-            BF_PrintError(messages);
+            BF_PrintError(error_mess);
             return -1;
         }
 
@@ -138,12 +138,12 @@ int HP_InsertEntry(HP_info hp, Record record){
     if(!record_inserted){
 
         if(BF_AllocateBlock(hp.fileDesc) < 0){
-            BF_PrintError(messages);
+            BF_PrintError(error_mess);
             return -1;
         }
 
         if(BF_ReadBlock(hp.fileDesc, i, &block)){
-            BF_PrintError(messages);
+            BF_PrintError(error_mess);
             return -1;
         }
 
@@ -161,23 +161,125 @@ int HP_InsertEntry(HP_info hp, Record record){
 
 
     if(BF_WriteBlock(hp.fileDesc, i) < 0){
-        BF_PrintError(messages);
+        BF_PrintError(error_mess);
         return -1;
     }
 
 
-    Block_info_print(curr_block);
+    // Block_info_print(curr_block);
     
 
     return 0;
 }
 
 
+int HP_DeleteEntry(HP_info hp, void* value){
+
+    void* block;
+    Block_info* curr_block;
+
+    int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
+
+    for(int i = 1 ; i < num_of_blocks ; i ++){
+
+        if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
+            BF_PrintError(error_mess);
+            return -1;
+        }
+
+        curr_block = block;
+        for(int j = 0 ; j < MAX_RECORDS ; j++){
+            if(curr_block->records[j].id == *(int*)value){
+                memset(&curr_block->records[j], 0, sizeof(Record));
+                curr_block->num_of_records--;
+                 if(BF_WriteBlock(hp.fileDesc, i) < 0){
+                    BF_PrintError(error_mess);
+                    return -1;
+                }
+                return 0;
+            }
+        }
+    }
+
+    // If deleting doesn't happen, we return error code -1.
+    return -1;
+
+}
+
+
+
+
+int HP_GetAllEntries(HP_info hp, void* value){
+
+    void* block;
+    Block_info* curr_block;
+    
+
+    int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
+
+    for(int i = 1 ; i < num_of_blocks ; i ++){
+
+        if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
+            BF_PrintError(error_mess);
+            return -1;
+        }
+
+        curr_block = block;
+        for(int j = 0 ; j < MAX_RECORDS ; j++){
+            bool is_found = false;
+
+            if(Record_is_empty(&curr_block->records[j])){
+                continue;
+            }
+
+            if(hp.attrType == 'i' && !strcmp(hp.attrName, "id")){
+                if(curr_block->records[j].id == *(int*)value){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "name")){
+                if(!strcmp(curr_block->records[j].name, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "surname")){
+                if(!strcmp(curr_block->records[j].surname, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "address")){
+                if(!strcmp(curr_block->records[j].address, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else{
+                printf("File has incorrect attribute!Try again.\n");
+                return -1;
+            }
+
+            if(is_found){
+                Record_print(&curr_block->records[j]);
+            }
+        }
+    }
+
+}
+
+
+
+
+
+
 
 void Block_info_print(Block_info* b){
 
+
     printf("Index: %d\n", b->index);
-    for(int i = 0 ; i < b->num_of_records ; i++){
+    for(int i = 0 ; i < MAX_RECORDS ; i++){
+        // if(!strcmp(b->records[i].name, "")){
+        //     printf("NULL\n");
+        //     continue;
+        // }
         printf("ID: %d\n", b->records[i].id);
         printf("Name: %s\n", b->records[i].name);
         printf("Surname: %s\n", b->records[i].surname);

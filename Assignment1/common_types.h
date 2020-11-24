@@ -11,15 +11,7 @@
 // floor(BLOCK_SIZE/sizeof(Record))
 #define MAX_RECORDS 5
 
-
-typedef struct{
-    
-    int id;
-    char name[15];
-    char surname[25];
-    char address[50];
-
-}Record;
+#include "Record.h"
 
 
 typedef struct{
