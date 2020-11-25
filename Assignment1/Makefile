@@ -5,7 +5,7 @@ CFLAGS = -g3 -static
 PROGRAM = prog
 
 #The objects needed in order to compile the program:
-OBJECTS = Record.o Heap.o main.o BF_64.a
+OBJECTS = Record.o Heap.o HashTable.o main.o BF_64.a
 
 
 $(PROGRAM) : $(OBJECTS)
@@ -13,7 +13,7 @@ $(PROGRAM) : $(OBJECTS)
 
 clean :
 	rm $(PROGRAM) *.o
-	rm HP1
+	rm HP1 HT1
 
 run : $(PROGRAM)
 	./$(PROGRAM)

@@ -189,10 +189,41 @@ int HP_DeleteEntry(HP_info hp, void* value){
 
         curr_block = block;
         for(int j = 0 ; j < MAX_RECORDS ; j++){
-            if(curr_block->records[j].id == *(int*)value){
+
+            bool is_found = false;
+
+            if(Record_is_empty(&curr_block->records[j])){
+                continue;
+            }
+
+            if(hp.attrType == 'i' && !strcmp(hp.attrName, "id")){
+                if(curr_block->records[j].id == *(int*)value){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "name")){
+                if(!strcmp(curr_block->records[j].name, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "surname")){
+                if(!strcmp(curr_block->records[j].surname, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "address")){
+                if(!strcmp(curr_block->records[j].address, (char*)value)){
+                    is_found = true;
+                }
+            }
+            else{
+                printf("File has incorrect attribute!Try again.\n");
+                return -1;
+            }
+            if(is_found){
                 memset(&curr_block->records[j], 0, sizeof(Record));
                 curr_block->num_of_records--;
-                 if(BF_WriteBlock(hp.fileDesc, i) < 0){
+                if(BF_WriteBlock(hp.fileDesc, i) < 0){
                     BF_PrintError(error_mess);
                     return -1;
                 }
