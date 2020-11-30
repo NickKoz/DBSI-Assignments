@@ -11,6 +11,8 @@
 // floor(BLOCK_SIZE/sizeof(Record))
 #define MAX_RECORDS 5
 
+#define BUFFER_SIZE 256
+
 #include "Record.h"
 
 

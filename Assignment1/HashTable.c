@@ -1,4 +1,5 @@
 #include "HashTable.h"
+#include "Heap.h"
 
 char error_mess[256];
 
@@ -30,7 +31,7 @@ int HT_CreateIndex(char* fileName, char attrType, char* attrName, int attrLength
 
     void* block;
 
-    if(BF_ReadBlock(fd, 0, &block)){
+    if(BF_ReadBlock(fd, 0, &block) < 0){
         BF_PrintError(error_mess);
         return -1;
     }
@@ -42,27 +43,29 @@ int HT_CreateIndex(char* fileName, char attrType, char* attrName, int attrLength
         return -1;
     }
 
-    Block_info* curr_block = block;
+    Block_info* curr_block;
 
-    for(int i = 1 ; i < buckets + 1 ; i++){
+    for(int i = 0 ; i < buckets ; i++){
 
         if(BF_AllocateBlock(fd) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
 
-        if(BF_ReadBlock(fd, i, &block)){
+        if(BF_ReadBlock(fd, i+1, &block) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
 
-        curr_block->index = i - 1;
+        curr_block = block;
+
+        curr_block->index = i;
         curr_block->next = -1;  // Next is NULL
         curr_block->num_of_records = 0;
 
         memcpy(block, curr_block, sizeof(Block_info));
 
-        if(BF_WriteBlock(fd, 0) < 0){
+        if(BF_WriteBlock(fd, i+1) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
@@ -85,19 +88,26 @@ HT_info* HT_OpenIndex(char* fileName){
     HT_info* header = malloc(sizeof(HT_info));
     void* block;
 
-    if(BF_ReadBlock(fd, 0, &block)){
+    if(BF_ReadBlock(fd, 0, &block) < 0){
         BF_PrintError(error_mess);
         return NULL;
     }
 
     HT_info* temp = block;
     
-    header->fileDesc = temp->fileDesc;
+    header->fileDesc = fd;
     header->attrType = temp->attrType;
     header->attrName = malloc(sizeof(temp->attrName));
     strcpy(header->attrName, temp->attrName);
     header->attrLength = temp->attrLength;
     header->numBuckets = temp->numBuckets;
+
+    memcpy(block, header, sizeof(Block_info));
+
+    if(BF_WriteBlock(fd, 0) < 0){
+        BF_PrintError(error_mess);
+        return NULL;
+    }
 
     return header;
 }
@@ -200,12 +210,19 @@ int HT_InsertEntry(HT_info ht, Record record){
 
         curr_block->next = BF_GetBlockCounter(ht.fileDesc);
 
+        // memcpy ??
+
+        if(BF_WriteBlock(ht.fileDesc, i) < 0){
+            BF_PrintError(error_mess);
+            return -1;
+        }
+
         if(BF_AllocateBlock(ht.fileDesc) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
 
-        if(BF_ReadBlock(ht.fileDesc, BF_GetBlockCounter(ht.fileDesc) - 1, &block)){
+        if(BF_ReadBlock(ht.fileDesc, BF_GetBlockCounter(ht.fileDesc) - 1, &block) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
@@ -227,6 +244,7 @@ int HT_InsertEntry(HT_info ht, Record record){
         return -1;
     }
 
+    Block_info_print(curr_block);
 
 }
 
