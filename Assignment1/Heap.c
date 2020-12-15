@@ -1,6 +1,6 @@
 #include "Heap.h"
 
-char error_mess[256];
+char error_mess[BUFFER_SIZE];
 
 int HP_CreateFile(char* fileName, char attrType, char* attrName, int attrLength){
 
@@ -25,8 +25,7 @@ int HP_CreateFile(char* fileName, char attrType, char* attrName, int attrLength)
     // Header for new file.
     HP_info header = {.fileDesc = fd, .attrType = attrType,
     .attrLength = attrLength};
-    header.attrName = malloc(sizeof(attrName) + 1);
-    strcpy(header.attrName, attrName);
+    header.attrName = strdup(attrName);
 
     void* block;
 
@@ -41,6 +40,8 @@ int HP_CreateFile(char* fileName, char attrType, char* attrName, int attrLength)
         BF_PrintError(error_mess);
         return -1;
     }
+
+    free(header.attrName);
 
     return 0;
 }
@@ -66,8 +67,7 @@ HP_info* HP_OpenFile(char* fileName){
     
     header->fileDesc = fd;
     header->attrType = temp->attrType;
-    header->attrName = malloc(sizeof(temp->attrName));
-    strcpy(header->attrName, temp->attrName);
+    header->attrName = strdup(temp->attrName);
     header->attrLength = temp->attrLength;
 
     memcpy(block, header, sizeof(Block_info));
@@ -97,101 +97,95 @@ int HP_CloseFile(HP_info* hp_info){
 }
 
 
+static int overwrite_index_structure(HP_info* hp){
 
-bool check_for_duplicate_record(HP_info* hp, Record* record){
+    if(BF_GetBlockCounter(hp->fileDesc) == 22 || BF_GetBlockCounter(hp->fileDesc) == 23){
+        void* block;
+        for(int i = 1 ; i < BF_GetBlockCounter(hp->fileDesc) ; i++){
+            if(BF_ReadBlock(hp->fileDesc, i, &block) < 0){
+                BF_PrintError(error_mess);
+                return -1;
+            }
+        }
+    }
+    return 1;
+}
+
+
+static bool check_for_duplicates(HP_info* hp, int id){
 
     void* block;
     Block_info* curr_block;
 
+    overwrite_index_structure(hp);
+
     int num_of_blocks = BF_GetBlockCounter(hp->fileDesc);
-    int i;
-    for(i = 1 ; i < num_of_blocks ; i++){
+
+    // Iterating each block.
+    for(int i = 0 ; i < num_of_blocks ; i++){
 
         if(BF_ReadBlock(hp->fileDesc, i, &block) < 0){
             BF_PrintError(error_mess);
-            return -1;
+            return false;
         }
 
         curr_block = block;
 
+        // Searching for record with given id in block.
         for(int j = 0 ; j < MAX_RECORDS ; j++){
-
-            bool is_found = false;
 
             if(Record_is_empty(&curr_block->records[j])){
                 continue;
             }
 
-            if(hp->attrType == 'i' && !strcmp(hp->attrName, "id")){
-                if(curr_block->records[j].id == record->id){
-                    is_found = true;
-                }
-            }
-            else if(hp->attrType == 'c' && !strcmp(hp->attrName, "name")){
-                if(!strcmp(curr_block->records[j].name, record->name)){
-                    is_found = true;
-                }
-            }
-            else if(hp->attrType == 'c' && !strcmp(hp->attrName, "surname")){
-                if(!strcmp(curr_block->records[j].surname, record->surname)){
-                    is_found = true;
-                }
-            }
-            else if(hp->attrType == 'c' && !strcmp(hp->attrName, "address")){
-                if(!strcmp(curr_block->records[j].address, record->address)){
-                    is_found = true;
-                }
-            }
-            else{
-                printf("File has incorrect attribute!Try again.\n");
-                return false;
-            }
-            if(is_found){
+            if(curr_block->records[j].id == id){
                 return true;
             }
         }
+
     }
 
     return false;
 }
 
 
+
 int HP_InsertEntry(HP_info hp, Record record){
+
+    // if(check_for_duplicates(&hp, record.id)){
+    //     printf("Record already exists!\n");
+    //     return -1;
+    // }
+
 
     void* block;
     Block_info* curr_block;
 
-    if(check_for_duplicate_record(&hp, &record)){
-        printf("Record with ID: %d already exists!!\n", record.id);
-        return -1;
-    }
-
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
 
-    if(num_of_blocks > 1){
-        if(BF_ReadBlock(hp.fileDesc, 1, &block) < 0){
-            BF_PrintError(error_mess);
-            return -1;
-        }
-        curr_block = block;
-    }
+    overwrite_index_structure(&hp);
 
-    bool record_inserted = false;
+    
+
+    int block_ID;
+
+    // Iterating every block in the file.
     int i;
-    for(i = 1 ; i != -1 && num_of_blocks != 1 ; i = curr_block->next){
+    for(i = 1 ; i < num_of_blocks ; i++){
 
-         if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
+        if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
 
         curr_block = block;
 
+        // If block is full, goes to next one.
         if(curr_block->num_of_records == MAX_RECORDS){
             continue;
         }
 
-        // Checking if there is available position in the records in block i. 
+        // Finding available position for the record in block i. 
         int j;
         for(j = 0 ; j < MAX_RECORDS ; j++){
             if(!strcmp(curr_block->records[j].name, "")){
@@ -199,65 +193,72 @@ int HP_InsertEntry(HP_info hp, Record record){
             }
         }
         
-        // If we have available space in block, we insert the given record.
+        // Inserting the given record.
 
         memcpy(&curr_block->records[j], &record, sizeof(Record));
         curr_block->num_of_records++;
+
         
-        memcpy(block, curr_block, sizeof(Block_info));
-
-        record_inserted = true;
-
-        break;
-
-    }
-
-
-    if(!record_inserted){
-
-        if(num_of_blocks > 1){
-            curr_block->next = BF_GetBlockCounter(hp.fileDesc);
-
-            memcpy(block, curr_block, sizeof(Block_info));
-
-            if(BF_WriteBlock(hp.fileDesc, BF_GetBlockCounter(hp.fileDesc) - 1) < 0){
-                BF_PrintError(error_mess);
-                return -1;
-            } 
-        }
-        
-
-        if(BF_AllocateBlock(hp.fileDesc) < 0){
+        if(BF_WriteBlock(hp.fileDesc, i) < 0){
             BF_PrintError(error_mess);
             return -1;
         }
 
 
-        if(BF_ReadBlock(hp.fileDesc, BF_GetBlockCounter(hp.fileDesc) - 1, &block) < 0){
-            BF_PrintError(error_mess);
-            return -1;
-        }
+        block_ID = i;
 
-        curr_block = block;
+        return block_ID;
 
-        curr_block->index = BF_GetBlockCounter(hp.fileDesc) - 1;
-        curr_block->next = -1;  // Next is NULL
-        curr_block->num_of_records = 1;
-        memcpy(&curr_block->records[0], &record, sizeof(Record));
+    }
+    
+
+    // If there is no position in the existing blocks, creates a new block.
+
+    //sets next pointer for the previous block
+    if(num_of_blocks > 1){
+        curr_block->next = BF_GetBlockCounter(hp.fileDesc);
 
         memcpy(block, curr_block, sizeof(Block_info));
 
+        if(BF_WriteBlock(hp.fileDesc, num_of_blocks - 1) < 0){
+            BF_PrintError(error_mess);
+            return -1;
+        }
     }
+    
 
-
-    if(BF_WriteBlock(hp.fileDesc, BF_GetBlockCounter(hp.fileDesc) - 1) < 0){
+    if(BF_AllocateBlock(hp.fileDesc) < 0){
         BF_PrintError(error_mess);
         return -1;
     }
-    
-    
 
-    return 0;
+    num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
+
+
+    if(BF_ReadBlock(hp.fileDesc, num_of_blocks - 1, &block) < 0){
+        BF_PrintError(error_mess);
+        return -1;
+    }
+
+    curr_block = block;
+
+    curr_block->index = num_of_blocks - 1;
+    curr_block->next = FINAL_BLOCK;
+    curr_block->num_of_records = 1;
+    memcpy(&curr_block->records[0], &record, sizeof(Record));
+
+
+    block_ID = curr_block->index;
+
+
+
+    if(BF_WriteBlock(hp.fileDesc, num_of_blocks - 1) < 0){
+        BF_PrintError(error_mess);
+        return -1;
+    }
+
+
+    return block_ID;
 }
 
 
@@ -268,6 +269,7 @@ int HP_DeleteEntry(HP_info hp, void* value){
 
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
 
+    // Iterating every block in the file.
     for(int i = 1 ; i < num_of_blocks ; i ++){
 
         if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
@@ -284,30 +286,12 @@ int HP_DeleteEntry(HP_info hp, void* value){
                 continue;
             }
 
-            if(hp.attrType == 'i' && !strcmp(hp.attrName, "id")){
-                if(curr_block->records[j].id == *(int*)value){
-                    is_found = true;
-                }
+
+            if(curr_block->records[j].id == *(int*)value){
+                is_found = true;
             }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "name")){
-                if(!strcmp(curr_block->records[j].name, (char*)value)){
-                    is_found = true;
-                }
-            }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "surname")){
-                if(!strcmp(curr_block->records[j].surname, (char*)value)){
-                    is_found = true;
-                }
-            }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "address")){
-                if(!strcmp(curr_block->records[j].address, (char*)value)){
-                    is_found = true;
-                }
-            }
-            else{
-                printf("File has incorrect attribute!Try again.\n");
-                return -1;
-            }
+            
+            // If record is found, puts zeros in record's position.
             if(is_found){
                 memset(&curr_block->records[j], 0, sizeof(Record));
                 curr_block->num_of_records--;
@@ -317,6 +301,7 @@ int HP_DeleteEntry(HP_info hp, void* value){
                 }
                 return 0;
             }
+
         }
     }
 
@@ -332,10 +317,13 @@ int HP_GetAllEntries(HP_info hp, void* value){
 
     void* block;
     Block_info* curr_block;
-    
+    int return_value = -1;
+
+    overwrite_index_structure(&hp);
 
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
 
+    // Iterating each block.
     for(int i = 1 ; i < num_of_blocks ; i ++){
 
         if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
@@ -343,45 +331,32 @@ int HP_GetAllEntries(HP_info hp, void* value){
             return -1;
         }
 
+
         curr_block = block;
+
+
         for(int j = 0 ; j < MAX_RECORDS ; j++){
-            bool is_found = false;
 
             if(Record_is_empty(&curr_block->records[j])){
                 continue;
             }
 
-            if(hp.attrType == 'i' && !strcmp(hp.attrName, "id")){
+            if(value != NULL){
+                // If record is found, prints it.
                 if(curr_block->records[j].id == *(int*)value){
-                    is_found = true;
-                }
-            }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "name")){
-                if(!strcmp(curr_block->records[j].name, (char*)value)){
-                    is_found = true;
-                }
-            }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "surname")){
-                if(!strcmp(curr_block->records[j].surname, (char*)value)){
-                    is_found = true;
-                }
-            }
-            else if(hp.attrType == 'c' && !strcmp(hp.attrName, "address")){
-                if(!strcmp(curr_block->records[j].address, (char*)value)){
-                    is_found = true;
+                    Record_print(&curr_block->records[j]);
+                    return i;
                 }
             }
             else{
-                printf("File has incorrect attribute!Try again.\n");
-                return -1;
-            }
-
-            if(is_found){
                 Record_print(&curr_block->records[j]);
+                return_value = i;
             }
+   
         }
     }
 
+    return return_value;
 }
 
 

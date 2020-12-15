@@ -1,19 +1,35 @@
 #The compiler options(-g3 is needed for debugging) :
 CFLAGS = -g3 -static 
 
-#The final executable file:
-PROGRAM = prog
+#The final executable files:
+HT_PROG = prog_ht
+HP_PROG = prog_hp
 
 #The objects needed in order to compile the program:
-OBJECTS = Record.o Heap.o HashTable.o main.o BF_64.a
+HT_OBJECTS = Record.o Heap.o HashTable.o HT_main.o BF_64.a # !!
+HP_OBJECTS = Record.o Heap.o HashTable.o HP_main.o BF_64.a # !!
 
 
-$(PROGRAM) : $(OBJECTS)
-	gcc $(CFLAGS) $(OBJECTS) -o $(PROGRAM)
+all : $(HT_PROG) $(HP_PROG)
+
+$(HT_PROG) : $(HT_OBJECTS)
+	gcc $(CFLAGS) $(HT_OBJECTS) -o $(HT_PROG)
+
+$(HP_PROG) : $(HP_OBJECTS)
+	gcc $(CFLAGS) $(HP_OBJECTS) -o $(HP_PROG)
+
+clean_hp :
+	rm $(HP_PROG) *.o HP1
+
+clean_ht :
+	rm $(HT_PROG) *.o HT1
 
 clean :
-	rm $(PROGRAM) *.o
-	rm HP1 HT1
+	rm $(HP_PROG) $(HT_PROG) HT1 HP1 *.o
 
-run : $(PROGRAM)
-	./$(PROGRAM)
+
+run_ht : $(HT_PROG)
+	./$(HT_PROG)
+
+run_hp : $(HP_PROG)
+	./$(HP_PROG)
