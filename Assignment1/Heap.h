@@ -24,8 +24,4 @@ int HP_DeleteEntry(HP_info,void*);
 int HP_GetAllEntries(HP_info,void*);
 
 
-void Block_info_print(Block_info*);
-void HP_info_print(HP_info*);
-
-
 #endif

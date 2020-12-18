@@ -24,6 +24,7 @@ int main(void){
         return -1;
     }
 
+    // Inserts all records from file.
     int status;
     for(int i = 0 ; i < num_of_records ; i++){
         status = HP_InsertEntry(*temp_header, records[i]);
@@ -32,6 +33,7 @@ int main(void){
         }
     }
 
+    // Prints all records.
     status = HP_GetAllEntries(*temp_header, NULL);
     printf("Blocks iterated: %d\n", status);
 
@@ -54,6 +56,7 @@ int main(void){
         }
     }
 
+    // Deletes 5 random records. 
     for(int i = 0 ; i < num_for_deletion ; i++){
         status = HP_DeleteEntry(*temp_header, &to_be_deleted[i]);
         if(status < 0){
@@ -67,7 +70,7 @@ int main(void){
     for(int i = 0 ; i < num_for_deletion ; i++){
         status = HP_GetAllEntries(*temp_header, &to_be_deleted[i]);
         if(status < 0){
-            printf("Getting failed for record with ID: %d\n", to_be_deleted[i]);
+            printf("Getting record failed for record with ID: %d\n", to_be_deleted[i]);
         }
     }
 

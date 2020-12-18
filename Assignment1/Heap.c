@@ -99,9 +99,9 @@ int HP_CloseFile(HP_info* hp_info){
 
 static int overwrite_index_structure(HP_info* hp){
 
-    if(BF_GetBlockCounter(hp->fileDesc) == 22 || BF_GetBlockCounter(hp->fileDesc) == 23){
+    if(BF_GetBlockCounter(hp->fileDesc) == 20){
         void* block;
-        for(int i = 1 ; i < BF_GetBlockCounter(hp->fileDesc) ; i++){
+        for(int i = 0 ; i < BF_GetBlockCounter(hp->fileDesc) ; i++){
             if(BF_ReadBlock(hp->fileDesc, i, &block) < 0){
                 BF_PrintError(error_mess);
                 return -1;
@@ -117,12 +117,10 @@ static bool check_for_duplicates(HP_info* hp, int id){
     void* block;
     Block_info* curr_block;
 
-    overwrite_index_structure(hp);
-
     int num_of_blocks = BF_GetBlockCounter(hp->fileDesc);
 
     // Iterating each block.
-    for(int i = 0 ; i < num_of_blocks ; i++){
+    for(int i = 1 ; i < num_of_blocks ; i++){
 
         if(BF_ReadBlock(hp->fileDesc, i, &block) < 0){
             BF_PrintError(error_mess);
@@ -152,20 +150,18 @@ static bool check_for_duplicates(HP_info* hp, int id){
 
 int HP_InsertEntry(HP_info hp, Record record){
 
-    // if(check_for_duplicates(&hp, record.id)){
-    //     printf("Record already exists!\n");
-    //     return -1;
-    // }
+    overwrite_index_structure(&hp);
+
+    if(check_for_duplicates(&hp, record.id)){
+        printf("Record already exists!\n");
+        return -1;
+    }
 
 
     void* block;
     Block_info* curr_block;
 
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
-
-    overwrite_index_structure(&hp);
-
-    
 
     int block_ID;
 
@@ -358,42 +354,3 @@ int HP_GetAllEntries(HP_info hp, void* value){
 
     return return_value;
 }
-
-
-
-
-
-
-
-void Block_info_print(Block_info* b){
-
-
-    printf("Index: %d\n", b->index);
-    printf("Next: %d\n", b->next);
-    // for(int i = 0 ; i < MAX_RECORDS ; i++){
-    //     // if(!strcmp(b->records[i].name, "")){
-    //     //     printf("NULL\n");
-    //     //     continue;
-    //     // }
-    //     printf("ID: %d\n", b->records[i].id);
-    //     printf("Name: %s\n", b->records[i].name);
-    //     printf("Surname: %s\n", b->records[i].surname);
-    //     printf("Address: %s\n", b->records[i].address);
-    // }
-    printf("Num of records: %d\n\n\n", b->num_of_records);
-
-}
-
-
-
-void HP_info_print(HP_info* hp){
-
-    printf("File descriptor: %d\n",hp->fileDesc);
-    printf("Attribute type: %c\n",hp->attrType);
-    printf("Attribute name: %s\n",hp->attrName);
-    printf("Attribute length: %d\n",hp->attrLength);
-
-}
-
-
-

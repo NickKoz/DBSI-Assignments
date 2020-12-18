@@ -24,7 +24,4 @@ int HT_GetAllEntries(HT_info, void*);
 int HashStatistics(char*);
 
 
-void HT_info_print(HT_info*);
-
-
 #endif

@@ -10,6 +10,8 @@
 #include <time.h>
 #include "BF.h"
 
+#include "Record.h"
+
 // floor(BLOCK_SIZE/sizeof(Record))
 #define MAX_RECORDS (int)(BLOCK_SIZE/sizeof(Record))
 
@@ -17,7 +19,7 @@
 
 #define FINAL_BLOCK -1
 
-#include "Record.h"
+
 
 
 // Structure that is used to cast the fetched block.

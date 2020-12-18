@@ -1,5 +1,4 @@
 #include "HashTable.h"
-#include "Heap.h"
 
 char error_mess[BUFFER_SIZE];
 
@@ -306,12 +305,40 @@ int HT_GetAllEntries(HT_info ht, void* value){
 
     void* block;
     Block_info* curr_block;
-    int h = hash_int(*(int*)value, ht.numBuckets);
+    int h,i;
+
+    if(value != NULL){
+        h = hash_int(*(int*)value, ht.numBuckets);
+        // i is index to corresponding bucket's first block.
+        i = h + 1;  // Number 0 block is the header block.
+    }
+    else{
+        int k;
+        for(int j = 0; j < ht.numBuckets ; j++){
+            k = j + 1;
+            while(true){
+                if(BF_ReadBlock(ht.fileDesc, k, &block) < 0){
+                    BF_PrintError(error_mess);
+                    return -1;
+                }
+
+                curr_block = block;
+                for(int l = 0 ; l < MAX_RECORDS ; l++){
+                    if(!Record_is_empty(&curr_block->records[l]))
+                        Record_print(&curr_block->records[l]);
+                }
+
+                k = curr_block->next;
+                if(k == FINAL_BLOCK){
+                    break;
+                }
+            }
+        }
+        return 0;
+    }
 
     int block_counter = -1, blocks = 0;
 
-    // i is index to corresponding bucket's first block.
-    int i = h + 1;  // Number 0 block is the header block.
     while(true){
 
         if(BF_ReadBlock(ht.fileDesc, i, &block) < 0){
@@ -485,9 +512,9 @@ int HashStatistics(char* filename){
 
     printf("Max number of records: %d\n", max);
     printf("Min number of records: %d\n", min);
-    printf("Average number of records: %d\n\n", (int)sum_records/buckets);
+    printf("Average number of records: %.4f\n\n", (float)sum_records/buckets);
 
-    printf("Average number of blocks: %d\n\n", (int)sum_blocks/buckets);
+    printf("Average number of blocks: %.4f\n\n", (float)sum_blocks/buckets);
 
 
     int overflowed_buckets = 0;
@@ -502,18 +529,4 @@ int HashStatistics(char* filename){
 
 
     HT_CloseIndex(ht);
-}
-
-
-
-
-
-void HT_info_print(HT_info* hp){
-
-    printf("File descriptor: %d\n",hp->fileDesc);
-    printf("Attribute type: %c\n",hp->attrType);
-    printf("Attribute name: %s\n",hp->attrName);
-    printf("Attribute length: %d\n",hp->attrLength);
-    printf("Num of buckets: %ld\n",hp->numBuckets);
-
 }
