@@ -97,19 +97,7 @@ int HP_CloseFile(HP_info* hp_info){
 }
 
 
-static int overwrite_index_structure(HP_info* hp){
 
-    if(BF_GetBlockCounter(hp->fileDesc) == 20){
-        void* block;
-        for(int i = 0 ; i < BF_GetBlockCounter(hp->fileDesc) ; i++){
-            if(BF_ReadBlock(hp->fileDesc, i, &block) < 0){
-                BF_PrintError(error_mess);
-                return -1;
-            }
-        }
-    }
-    return 1;
-}
 
 
 static bool check_for_duplicates(HP_info* hp, int id){
@@ -150,13 +138,12 @@ static bool check_for_duplicates(HP_info* hp, int id){
 
 int HP_InsertEntry(HP_info hp, Record record){
 
-    overwrite_index_structure(&hp);
 
-    if(check_for_duplicates(&hp, record.id)){
-        printf("Record already exists!\n");
-        return -1;
-    }
-
+    // if(check_for_duplicates(&hp, record.id)){
+    //     printf("Record already exists!\n");
+    //     return -1;
+    // }
+    
 
     void* block;
     Block_info* curr_block;
@@ -164,10 +151,18 @@ int HP_InsertEntry(HP_info hp, Record record){
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
 
     int block_ID;
+    int i;
+
+    if(num_of_blocks == 1){
+        i = 1;
+    }
+    else{
+        i = num_of_blocks - 1;
+    }
 
     // Iterating every block in the file.
-    int i;
-    for(i = 1 ; i < num_of_blocks ; i++){
+    
+    for(; i < num_of_blocks ; i++){
 
         if(BF_ReadBlock(hp.fileDesc, i, &block) < 0){
             BF_PrintError(error_mess);
@@ -315,8 +310,6 @@ int HP_GetAllEntries(HP_info hp, void* value){
     Block_info* curr_block;
     int return_value = -1;
 
-    overwrite_index_structure(&hp);
-
     int num_of_blocks = BF_GetBlockCounter(hp.fileDesc);
 
     // Iterating each block.
@@ -337,16 +330,11 @@ int HP_GetAllEntries(HP_info hp, void* value){
                 continue;
             }
 
-            if(value != NULL){
-                // If record is found, prints it.
-                if(curr_block->records[j].id == *(int*)value){
-                    Record_print(&curr_block->records[j]);
-                    return i;
-                }
-            }
-            else{
+
+            // If record is found, prints it.
+            if(curr_block->records[j].id == *(int*)value){
                 Record_print(&curr_block->records[j]);
-                return_value = i;
+                return i;
             }
    
         }

@@ -97,8 +97,7 @@ HT_info* HT_OpenIndex(char* fileName){
     
     header->fileDesc = fd;
     header->attrType = temp->attrType;
-    header->attrName = malloc(sizeof(temp->attrName));
-    strcpy(header->attrName, temp->attrName);
+    header->attrName = strdup(temp->attrName);
     header->attrLength = temp->attrLength;
     header->numBuckets = temp->numBuckets;
 
@@ -134,22 +133,6 @@ int hash_int(int key, int buckets){
 }
 
 
-
-static int overwrite_index_structure(HT_info* ht){
-    if(ht->numBuckets == 1){
-        if(BF_GetBlockCounter(ht->fileDesc) == 22 || BF_GetBlockCounter(ht->fileDesc) == 23){
-            void* block;
-            for(int i = 1 ; i < BF_GetBlockCounter(ht->fileDesc) ; i++){
-                if(BF_ReadBlock(ht->fileDesc, i, &block) < 0){
-                    BF_PrintError(error_mess);
-                    return -1;
-                }
-            }
-        }
-        return 1;
-    }
-    return 1;
-}
 
 
 static bool check_for_duplicates(HT_info* ht, int id){
@@ -204,11 +187,7 @@ int HT_InsertEntry(HT_info ht, Record record){
 
     void* block;
     Block_info* curr_block;
-    int h;
-
-    overwrite_index_structure(&ht);
-
-    h = hash_int(record.id, ht.numBuckets);
+    int h = hash_int(record.id, ht.numBuckets);
     
     bool record_inserted = false;
 
@@ -295,7 +274,7 @@ int HT_InsertEntry(HT_info ht, Record record){
         return -1;
     }
 
-    // Block_info_print(curr_block);
+
     return i;
 }
 
@@ -334,7 +313,7 @@ int HT_GetAllEntries(HT_info ht, void* value){
                 }
             }
         }
-        return 0;
+        return BF_GetBlockCounter(ht.fileDesc) - 1;
     }
 
     int block_counter = -1, blocks = 0;
@@ -388,7 +367,7 @@ int HT_DeleteEntry(HT_info header_info, void* value){
     Block_info* curr_block;
     int h = hash_int(*(int*)value, header_info.numBuckets);
     
-    bool is_found;
+    bool is_found = false;
     // i is index to corresponding bucket's first block.
     int i = h + 1;  // Number 0 block is the header block.
     while(true){
@@ -402,8 +381,6 @@ int HT_DeleteEntry(HT_info header_info, void* value){
         
         // Searching every record in the block.
         for(int j = 0 ; j < MAX_RECORDS ; j++){
-
-            is_found = false;
 
             if(Record_is_empty(&curr_block->records[j])){
                 continue;

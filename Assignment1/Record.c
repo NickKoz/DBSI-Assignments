@@ -56,6 +56,8 @@ Record* Record_extract(char* filename){
     int id;
     for(int i = 0 ; i < num_of_records ; i++){
 
+        memset(buffer_line, 0, BUFFER_SIZE);
+
         // Fetches each line of the file.
         fgets(buffer_line, BUFFER_SIZE, fp);
 

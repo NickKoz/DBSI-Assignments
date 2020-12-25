@@ -62,6 +62,9 @@ int main(void){
         if(status < 0){
             printf("Deletion failed for record with ID: %d\n", to_be_deleted[i]);
         }
+        else{
+            printf("Successfull deletion for record with ID: %d\n", to_be_deleted[i]);
+        }
     }
 
     printf("\n#############################\n");
@@ -70,7 +73,7 @@ int main(void){
     for(int i = 0 ; i < num_for_deletion ; i++){
         status = HT_GetAllEntries(*temp_header, &to_be_deleted[i]);
         if(status < 0){
-            printf("Getting record failed for record with ID: %d\n", to_be_deleted[i]);
+            printf("Cannot find record with ID: %d\n", to_be_deleted[i]);
         }
     }
 

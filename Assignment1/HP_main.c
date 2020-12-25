@@ -33,10 +33,16 @@ int main(void){
         }
     }
 
-    // Prints all records.
-    status = HP_GetAllEntries(*temp_header, NULL);
-    printf("Blocks iterated: %d\n", status);
+    // Prints all records
+    for(int i = 0 ; i < num_of_records ; i++){
+        status = HP_GetAllEntries(*temp_header, &i);
+        if(status < 0){
+            printf("Getting failed for record with ID: %d\n", i);
+        }
+    }
 
+
+    // Picks 5 random records, gets them, deletes them and tries to get them again
 
     srand(time(NULL));
     int num_for_deletion = 5;
@@ -62,6 +68,9 @@ int main(void){
         if(status < 0){
             printf("Deletion failed for record with ID: %d\n", to_be_deleted[i]);
         }
+        else{
+            printf("Successfull deletion for record with ID: %d\n", to_be_deleted[i]);
+        }
     }
 
    printf("\n#############################\n");
@@ -70,7 +79,7 @@ int main(void){
     for(int i = 0 ; i < num_for_deletion ; i++){
         status = HP_GetAllEntries(*temp_header, &to_be_deleted[i]);
         if(status < 0){
-            printf("Getting record failed for record with ID: %d\n", to_be_deleted[i]);
+            printf("Cannot find record with ID:: %d\n", to_be_deleted[i]);
         }
     }
 
