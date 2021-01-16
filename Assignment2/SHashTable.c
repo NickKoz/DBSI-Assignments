@@ -327,8 +327,93 @@ int SHT_SecondaryGetAllEntries(SHT_info header_info_sht, HT_info header_info_ht,
 
 
 
+int SHT_HashStatistics(char* filename){
+
+    SHT_info* ht = SHT_OpenSecondaryIndex(filename);
+
+    printf("############################\n");
+    printf("#      Hash Statistics     #\n");
+    printf("############################\n\n");
 
 
+    printf("Blocks: %d\n", BF_GetBlockCounter(ht->fileDesc));
+
+    int buckets = ht->numBuckets;
+
+    int records[buckets];
+    int blocks[buckets];
+    for(int i = 0 ; i < buckets ; i++){
+        records[i] = 0;
+        blocks[i] = 0;
+    }
+
+
+    int j;
+    void* block;
+    SHT_Block_info* curr_block;
+    for(int i = 1 ; i <= buckets ; i++){
+        
+        j = i;
+        while(true){
+
+            if(BF_ReadBlock(ht->fileDesc, j, &block) < 0){
+                BF_PrintError(error_mess);
+                return -1;
+            }
+            
+            curr_block = block;
+            records[i-1] += curr_block->num_of_entries;
+            blocks[i-1]++;
+
+            j = curr_block->next;
+
+            if(j == FINAL_BLOCK){
+                break;
+            }
+        }
+        
+    }
+
+    int min = records[0];
+    int max = records[0];
+    int sum_records = 0;
+    int sum_blocks = 0;
+
+    for(int i = 0 ; i < buckets ; i++){
+
+        if(records[i] > max){
+            max = records[i];
+        }
+
+        if(records[i] < min){
+            min = records[i];
+        }
+
+        sum_records += records[i];
+
+        sum_blocks += blocks[i];
+    }
+
+    printf("Max number of records: %d\n", max);
+    printf("Min number of records: %d\n", min);
+    printf("Average number of records: %.4f\n\n", (float)sum_records/buckets);
+
+    printf("Average number of blocks: %.4f\n\n", (float)sum_blocks/buckets);
+
+
+    int overflowed_buckets = 0;
+    for(int i = 0 ; i < buckets ; i++){
+        if(blocks[i] > 1){
+            printf("Bucket %d: %d\n", i, blocks[i] - 1);
+            overflowed_buckets++;
+        }
+    }
+
+    printf("\nOverflowed buckets: %d\n", overflowed_buckets);
+
+
+    SHT_CloseSecondaryIndex(ht);
+}
 
 
 
