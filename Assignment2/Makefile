@@ -5,7 +5,7 @@ CFLAGS = -g3 -static
 PROG = prog
 
 #The objects needed in order to compile the program:
-OBJECTS = Record.o SHashTable.o HashTable.o HT_main.o BF_64.a
+OBJECTS = Record.o SHashTable.o HashTable.o main.o BF_64.a
 
 
 all : $(PROG)
